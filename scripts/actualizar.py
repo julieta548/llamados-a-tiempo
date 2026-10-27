@@ -11,9 +11,22 @@ HEADERS = {
 }
 
 def traer():
-    req = urllib.request.Request(URL, headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.loads(r.read().decode("utf-8"))
+    # Entra primero a la portada (para recibir las cookies de sesión) y después pide los datos.
+    import http.cookiejar
+    cj = http.cookiejar.CookieJar()
+    op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+    portada = urllib.request.Request("https://educacionales.mendoza.edu.ar/",
+                                     headers={"User-Agent": HEADERS["User-Agent"], "Accept": "text/html,application/xhtml+xml"})
+    op.open(portada, timeout=60).read()
+    print("Cookies recibidas:", [c.name for c in cj])
+    r = op.open(urllib.request.Request(URL, headers=HEADERS), timeout=60)
+    cuerpo = r.read().decode("utf-8", "replace")
+    try:
+        return json.loads(cuerpo)
+    except ValueError:
+        print("La respuesta no es JSON. URL final:", r.geturl(), "| Tipo:", r.headers.get("Content-Type"),
+              "| Inicio:", cuerpo[:200].replace("\n", " "))
+        raise
 
 def iso(s):
     m = re.match(r"(\d\d)/(\d\d)/(\d\d) (\d\d):(\d\d)", s)
