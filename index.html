@@ -38,6 +38,7 @@ details{margin-top:8px;font-size:.9rem;color:var(--muted)}summary{cursor:pointer
 .doc{display:grid;grid-template-columns:1fr;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
 @media (min-width:600px){.doc{grid-template-columns:1.3fr 1fr 1fr;align-items:center}}
 .btn,.cta{display:inline-block;background:var(--btn);color:var(--on-btn);font:700 1rem inherit;padding:12px 18px;border-radius:10px;text-decoration:none;border:0;cursor:pointer}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:14px 0}.btn:disabled{opacity:.4;cursor:default}
 footer{color:var(--muted);font-size:.85rem;margin-top:28px}
 </style>
 </head>
@@ -54,7 +55,7 @@ footer{color:var(--muted);font-size:.85rem;margin-top:28px}
 <label class="chk"><input type="checkbox" id="fo" checked> Ocultar llamados ya vencidos</label>
 <div class="count" id="count" aria-live="polite">Cargando llamados…</div>
 <div id="list"></div>
-<p><button class="btn" id="more" hidden>Mostrar más</button></p>
+<nav class="pager" id="pager" aria-label="Paginado"></nav>
 
 <h2>Mi legajo</h2>
 <p class="ok" style="margin-top:0">Anotá cuándo vence cada documento y te mostramos cuánto falta. Se guarda solo en este dispositivo.</p>
@@ -65,7 +66,7 @@ footer{color:var(--muted);font-size:.85rem;margin-top:28px}
 <footer>Se muestran solo datos del llamado (escuela, cargo, horario, zona y requisitos). La app no accede a tu cuenta de GEI.</footer>
 </main>
 <script>
-var TZ="America/Argentina/Mendoza",$=function(i){return document.getElementById(i)},rows=[],lim=60;
+var TZ="America/Argentina/Mendoza",$=function(i){return document.getElementById(i)},rows=[],pag=1,PER=10;
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function lc(s){return esc(String(s).toLowerCase())}
 function fmtD(d){return d.toLocaleDateString("es-AR",{weekday:"short",day:"numeric",month:"numeric",timeZone:TZ})}
@@ -87,16 +88,17 @@ function render(){
     if(hide&&!x.nx)return false;if(fn&&r.nivel!==fn)return false;if(fd&&r.dep!==fd)return false;
     return !q||(r.esc+" "+r.loc+" "+r.mat+" "+r.reg+" "+r.dep).toLowerCase().indexOf(q)>-1}).sort(function(a,b){return(a.nx?a.nx.d:9e15)-(b.nx?b.nx.d:9e15)});
   $("count").textContent=list.length+" llamado"+(list.length===1?"":"s")+" encontrados de "+rows.length;
-  $("more").hidden=list.length<=lim;
-  $("list").innerHTML=list.slice(0,lim).map(function(x){var r=x.r;
+  var pages=Math.max(1,Math.ceil(list.length/PER));if(pag>pages)pag=pages;
+  $("pager").innerHTML=pages>1?'<button class="btn" id="prev"'+(pag<=1?' disabled':'')+'>← Anterior</button><span class="ok">Página '+pag+' de '+pages+'</span><button class="btn" id="next"'+(pag>=pages?' disabled':'')+'>Siguiente →</button>':'';
+  $("list").innerHTML=list.slice((pag-1)*PER,pag*PER).map(function(x){var r=x.r;
     var chips=r.ts.map(function(t){return'<span class="chip'+(t.d<=now?" done":"")+'">'+esc(t.n)+' · '+fmtH(t.d)+'</span>'}).join("");
     var nx=x.nx?'<div class="next">Próximo: '+esc(x.nx.n)+' llamado, '+fmtD(x.nx.d)+' '+fmtH(x.nx.d)+' · faltan <span class="t" data-t="'+x.nx.d.getTime()+'">'+cd(x.nx.d-now)+'</span>'+(x.nx.d-now<=4*3600e3?' <span class="open">Ventana de postulación (4 h)</span>':'')+'</div>':'<div class="next ok">Llamado vencido</div>';
     var meta=[r.nivel,r.turno,r.mat,r.horas?r.horas+" horas":"",r.zona?"Zona "+r.zona:""].filter(Boolean).map(function(m){return'<span class="chip">'+esc(m)+'</span>'}).join("");
     var det=[["Cómo postularse",r.pres],["Prioridad",r.prio],["Horario",r.horario],["Condiciones",r.cond],["Observaciones",r.obs]].filter(function(p){return p[1]}).map(function(p){return'<p style="margin:4px 0"><b>'+p[0]+':</b> '+esc(p[1])+'</p>'}).join("");
     return'<article class="card"><h3 class="cap">'+lc(r.reg||r.tipo)+'</h3><div class="sub cap">'+lc(r.esc)+' · '+lc(r.loc)+', '+lc(r.dep)+'</div><div class="chips">'+meta+'</div><div class="chips">'+chips+'</div>'+nx+(det?'<details><summary>Ver detalles</summary>'+det+'</details>':'')+'</article>'}).join("")||'<p class="ok">No hay llamados con esos filtros.</p>';
 }
-["fn","fd","fq","fo"].forEach(function(i){$(i).addEventListener("input",function(){lim=60;render()});$(i).addEventListener("change",function(){lim=60;render()})});
-$("more").addEventListener("click",function(){lim+=60;render()});
+["fn","fd","fq","fo"].forEach(function(i){$(i).addEventListener("input",function(){pag=1;render()});$(i).addEventListener("change",function(){pag=1;render()})});
+$("pager").addEventListener("click",function(e){var id=e.target.id;if(id==="prev")pag--;else if(id==="next")pag++;else return;render();$("list").scrollIntoView({block:"start"})});
 setInterval(function(){document.querySelectorAll("[data-t]").forEach(function(e){e.textContent=cd(Number(e.dataset.t)-Date.now())})},1000);
 setInterval(render,60000);
 var D=[["psico","Certificado psicofísico apto"],["penal","Antecedentes penales"],["dj","Declaración jurada de cargos"]],st={};
