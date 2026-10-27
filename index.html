@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Llamado a Tiempo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F6FB;--surface:#FFFFFF;--ink:#14284B;--muted:#4A5B78;--line:#C9D5E6;--mark:#FFD84D;--on-mark:#14284B;--btn:#14284B;--on-btn:#FFFFFF;--warn:#B3261E;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1A30;--surface:#18284A;--ink:#EAF0FA;--muted:#A9B8D3;--line:#2C4068;--btn:#FFD84D;--on-btn:#14284B;--warn:#FF8A80;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F1A30;--surface:#18284A;--ink:#EAF0FA;--muted:#A9B8D3;--line:#2C4068;--btn:#FFD84D;--on-btn:#14284B;--warn:#FF8A80;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.5 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:900px;margin:0 auto;padding:20px}
+h1{font-size:clamp(1.7rem,5vw,2.4rem);line-height:1.15;margin:0 0 6px}
+h2{font-size:1.3rem;margin:32px 0 10px}
+.beta{display:inline-block;background:var(--mark);color:var(--on-mark);font-weight:700;font-size:.8rem;padding:2px 8px;border-radius:6px;vertical-align:middle;margin-left:6px}
+.note{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--mark);border-radius:8px;padding:12px 14px;font-size:.95rem;color:var(--muted);margin:14px 0}
+.filters{display:grid;gap:10px;grid-template-columns:1fr 1fr}.filters .wide{grid-column:1/-1}
+@media (min-width:700px){.filters{grid-template-columns:1fr 1fr 1.5fr}.filters .wide{grid-column:auto}}
+select,input[type=text],input[type=date]{width:100%;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px}
+label.chk{display:flex;gap:8px;align-items:center;margin:10px 0;font-size:.95rem}
+:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+.ok{color:var(--muted)}.bad{color:var(--warn);font-weight:700}
+.count{color:var(--muted);font-size:.9rem;margin:6px 0 12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.card h3{margin:0;font-size:1.1rem}.cap{text-transform:capitalize}
+.sub{color:var(--muted);font-size:.95rem;margin:2px 0 8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chip{border:1px solid var(--line);border-radius:999px;padding:1px 10px;font-size:.85rem;color:var(--muted)}
+.chip.done{text-decoration:line-through;opacity:.6}
+.next{margin-top:8px;font-weight:700}
+.t{display:inline-block;background:var(--mark);color:var(--on-mark);padding:1px 8px;border-radius:6px;font-variant-numeric:tabular-nums}
+.open{color:var(--warn);font-size:.9rem}
+details{margin-top:8px;font-size:.9rem;color:var(--muted)}summary{cursor:pointer}
+.doc{display:grid;grid-template-columns:1fr;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+@media (min-width:600px){.doc{grid-template-columns:1.3fr 1fr 1fr;align-items:center}}
+.btn,.cta{display:inline-block;background:var(--btn);color:var(--on-btn);font:700 1rem inherit;padding:12px 18px;border-radius:10px;text-decoration:none;border:0;cursor:pointer}
+footer{color:var(--muted);font-size:.85rem;margin-top:28px}
+</style>
+</head>
+<body>
+<main>
+<h1>Llamado a Tiempo<span class="beta">BETA</span></h1>
+<p class="ok" style="margin:0">Llamados de Educacionales con cuenta regresiva y control de tus documentos.</p>
+<div class="note">Información tomada del portal Educacionales de la DGE. <b>No es una fuente oficial</b> y puede estar desactualizada: confirmá siempre en GEI antes de postularte. Proyecto independiente, no vinculado a la DGE. <span id="act"></span></div>
+<div class="filters">
+<select id="fn" aria-label="Nivel"><option value="">Todos los niveles</option></select>
+<select id="fd" aria-label="Departamento"><option value="">Todos los departamentos</option></select>
+<input id="fq" class="wide" type="text" placeholder="Buscar escuela, localidad, materia o cargo" aria-label="Buscar">
+</div>
+<label class="chk"><input type="checkbox" id="fo" checked> Ocultar llamados ya vencidos</label>
+<div class="count" id="count" aria-live="polite">Cargando llamados…</div>
+<div id="list"></div>
+<p><button class="btn" id="more" hidden>Mostrar más</button></p>
+
+<h2>Mi legajo</h2>
+<p class="ok" style="margin-top:0">Anotá cuándo vence cada documento y te mostramos cuánto falta. Se guarda solo en este dispositivo.</p>
+<div id="docs"></div>
+
+<h2>¿Qué te falta?</h2>
+<p><a class="cta" target="_blank" rel="noopener" href="https://wa.me/5492617232067?text=Hola%21%20Prob%C3%A9%20Llamado%20a%20Tiempo.%20Mi%20opini%C3%B3n%3A%20">Enviar mi opinión por WhatsApp</a></p>
+<footer>Se muestran solo datos del llamado (escuela, cargo, horario, zona y requisitos). La app no accede a tu cuenta de GEI.</footer>
+</main>
+<script>
+var TZ="America/Argentina/Mendoza",$=function(i){return document.getElementById(i)},rows=[],lim=60;
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function lc(s){return esc(String(s).toLowerCase())}
+function fmtD(d){return d.toLocaleDateString("es-AR",{weekday:"short",day:"numeric",month:"numeric",timeZone:TZ})}
+function fmtH(d){return d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit",hour12:false,timeZone:TZ})}
+function cd(ms){var s=Math.max(0,Math.floor(ms/1000)),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),x=s%60,p=function(n){return String(n).padStart(2,"0")};return(d?d+" d ":"")+p(h)+":"+p(m)+":"+p(x)}
+function fill(sel,vals){vals.forEach(function(v){var o=document.createElement("option");o.value=v;o.textContent=v.toLowerCase();o.className="cap";sel.appendChild(o)})}
+function cargar(){
+  fetch("data.json?_="+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){
+    rows=d.llamados.map(function(r){r.ts=r.f.map(function(x){return{n:x[0],d:new Date(x[1])}});return r});
+    [["fn","nivel"],["fd","dep"]].forEach(function(p){var s=$(p[0]),v=s.value;while(s.options.length>1)s.remove(1);fill(s,Array.from(new Set(rows.map(function(r){return r[p[1]]}).filter(Boolean))).sort());s.value=v});
+    $("act").textContent="Actualizado: "+new Date(d.actualizado).toLocaleString("es-AR",{timeZone:TZ,dateStyle:"short",timeStyle:"short"})+(d.fuente==="manual"?" (carga manual)":"")+".";
+    render();
+  }).catch(function(){if(!rows.length)$("count").innerHTML='<span class="bad">No pudimos cargar los llamados. Probá de nuevo en unos minutos.</span>'});
+}
+cargar();setInterval(cargar,300000);
+function render(){
+  var now=Date.now(),q=$("fq").value.toLowerCase(),fn=$("fn").value,fd=$("fd").value,hide=$("fo").checked;
+  var list=rows.map(function(r){return{r:r,nx:r.ts.find(function(t){return t.d>now})}}).filter(function(x){var r=x.r;
+    if(hide&&!x.nx)return false;if(fn&&r.nivel!==fn)return false;if(fd&&r.dep!==fd)return false;
+    return !q||(r.esc+" "+r.loc+" "+r.mat+" "+r.reg+" "+r.dep).toLowerCase().indexOf(q)>-1}).sort(function(a,b){return(a.nx?a.nx.d:9e15)-(b.nx?b.nx.d:9e15)});
+  $("count").textContent=list.length+" llamado"+(list.length===1?"":"s")+" encontrados de "+rows.length;
+  $("more").hidden=list.length<=lim;
+  $("list").innerHTML=list.slice(0,lim).map(function(x){var r=x.r;
+    var chips=r.ts.map(function(t){return'<span class="chip'+(t.d<=now?" done":"")+'">'+esc(t.n)+' · '+fmtH(t.d)+'</span>'}).join("");
+    var nx=x.nx?'<div class="next">Próximo: '+esc(x.nx.n)+' llamado, '+fmtD(x.nx.d)+' '+fmtH(x.nx.d)+' · faltan <span class="t" data-t="'+x.nx.d.getTime()+'">'+cd(x.nx.d-now)+'</span>'+(x.nx.d-now<=4*3600e3?' <span class="open">Ventana de postulación (4 h)</span>':'')+'</div>':'<div class="next ok">Llamado vencido</div>';
+    var meta=[r.nivel,r.turno,r.mat,r.horas?r.horas+" horas":"",r.zona?"Zona "+r.zona:""].filter(Boolean).map(function(m){return'<span class="chip">'+esc(m)+'</span>'}).join("");
+    var det=[["Cómo postularse",r.pres],["Prioridad",r.prio],["Horario",r.horario],["Condiciones",r.cond],["Observaciones",r.obs]].filter(function(p){return p[1]}).map(function(p){return'<p style="margin:4px 0"><b>'+p[0]+':</b> '+esc(p[1])+'</p>'}).join("");
+    return'<article class="card"><h3 class="cap">'+lc(r.reg||r.tipo)+'</h3><div class="sub cap">'+lc(r.esc)+' · '+lc(r.loc)+', '+lc(r.dep)+'</div><div class="chips">'+meta+'</div><div class="chips">'+chips+'</div>'+nx+(det?'<details><summary>Ver detalles</summary>'+det+'</details>':'')+'</article>'}).join("")||'<p class="ok">No hay llamados con esos filtros.</p>';
+}
+["fn","fd","fq","fo"].forEach(function(i){$(i).addEventListener("input",function(){lim=60;render()});$(i).addEventListener("change",function(){lim=60;render()})});
+$("more").addEventListener("click",function(){lim+=60;render()});
+setInterval(function(){document.querySelectorAll("[data-t]").forEach(function(e){e.textContent=cd(Number(e.dataset.t)-Date.now())})},1000);
+setInterval(render,60000);
+var D=[["psico","Certificado psicofísico apto"],["penal","Antecedentes penales"],["dj","Declaración jurada de cargos"]],st={};
+try{st=JSON.parse(localStorage.getItem("lat_legajo")||"{}")}catch(e){}
+function status(v){if(!v)return'<span class="ok">Sin fecha cargada</span>';var d=Math.ceil((new Date(v+"T23:59:59-03:00")-Date.now())/864e5);return d<0?'<span class="bad">Vencido hace '+(-d)+' día'+(d===-1?"":"s")+'</span>':d<=30?'<span class="bad">Vence en '+d+' día'+(d===1?"":"s")+'</span>':'<span class="ok">Vigente: faltan '+d+' días</span>'}
+$("docs").innerHTML=D.map(function(x){return'<div class="doc"><b>'+x[1]+'</b><input type="date" id="d_'+x[0]+'" aria-label="Vencimiento de '+x[1]+'" value="'+esc(st[x[0]]||"")+'"><span id="s_'+x[0]+'">'+status(st[x[0]])+'</span></div>'}).join("");
+D.forEach(function(x){$("d_"+x[0]).addEventListener("change",function(e){st[x[0]]=e.target.value;$("s_"+x[0]).innerHTML=status(e.target.value);try{localStorage.setItem("lat_legajo",JSON.stringify(st))}catch(err){}})});
+</script>
+</body>
+</html>
